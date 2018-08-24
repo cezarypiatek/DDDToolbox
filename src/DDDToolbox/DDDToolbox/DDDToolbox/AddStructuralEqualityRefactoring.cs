@@ -139,19 +139,31 @@ namespace DDDToolbox
             var compareStatements = publicProperties.Select(p =>
                 generator.InvocationExpression(generator.IdentifierName("Equals"),
                     generator.MemberAccessExpression(thisObj, p.Identifier.Text),
-                    generator.MemberAccessExpression(otherObj, p.Identifier.Text))/*.WithLeadingTrivia(SyntaxTriviaList.Create(SyntaxFactory.EndOfLine(Environment.NewLine)))*/);
+                    generator.MemberAccessExpression(otherObj, p.Identifier.Text))/*.WithLeadingTrivia(SyntaxTriviaList.Create(SyntaxFactory.EndOfLine(Environment.NewLine)))*/).ToList();
 
-            var compareStatement = typeDeclaration is ClassDeclarationSyntax
-                ? compareStatements.Aggregate(compareWithNull, generator.LogicalAndExpression)
-                : compareStatements.Aggregate(generator.LogicalAndExpression);
+            var compareStatement = GetCompareStatement(generator, typeDeclaration, compareStatements, compareWithNull);
 
             var equalsMethod = generator.MethodDeclaration("Equals",
                 new[] {generator.ParameterDeclaration("other", SyntaxFactory.ParseTypeName(className))},
                 returnType: SyntaxFactory.ParseTypeName("bool"), accessibility: Accessibility.Public, statements: new[]
                 {
-                    generator.ReturnStatement(compareStatement)
+                   compareStatement == null ? 
+                       generator.ThrowStatement(generator.ObjectCreationExpression(SyntaxFactory.ParseTypeName("NotImplementedException"))): 
+                       generator.ReturnStatement(compareStatement)
                 });
             return equalsMethod as MethodDeclarationSyntax;
+        }
+
+        private static SyntaxNode GetCompareStatement(SyntaxGenerator generator, TypeDeclarationSyntax typeDeclaration, List<SyntaxNode> compareStatements, SyntaxNode compareWithNull)
+        {
+            if (compareStatements.Count == 0)
+            {
+                return null;
+            }
+
+            return typeDeclaration is ClassDeclarationSyntax
+                ? compareStatements.Aggregate(compareWithNull, generator.LogicalAndExpression)
+                : compareStatements.Aggregate(generator.LogicalAndExpression);
         }
     }
 }
