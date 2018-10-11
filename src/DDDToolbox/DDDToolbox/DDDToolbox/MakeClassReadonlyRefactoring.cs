@@ -42,7 +42,7 @@ namespace DDDToolbox
 
             var newMembers = typeDeclaration.Members.Select(x =>
             {
-                if (x is PropertyDeclarationSyntax propertyDeclaration && propertyDeclaration.Modifiers.Any(SyntaxKind.PublicKeyword))
+                if (x is PropertyDeclarationSyntax propertyDeclaration && propertyDeclaration.Modifiers.Any(SyntaxKind.PublicKeyword) && propertyDeclaration.AccessorList!=null)
                 {
                     propertiesToSetFrmConstructor.Add(propertyDeclaration);
                     var accessorsWithoutSetter = propertyDeclaration.AccessorList.Accessors.Where(a => a.Kind() != SyntaxKind.SetAccessorDeclaration);
@@ -51,9 +51,27 @@ namespace DDDToolbox
                 return x;
             }).ToList();
 
-            var newConstructor = GenerateConstructor(typeDeclaration, generator, propertiesToSetFrmConstructor);
-            newMembers.Add(newConstructor);
+            var newConstructor = GenerateConstructor(typeDeclaration, generator, propertiesToSetFrmConstructor) as ConstructorDeclarationSyntax;
+            var newConstructorParameters = GetConstructorParameters(newConstructor);
+            var allConstructors = typeDeclaration.Members.Where(x => x.IsKind(SyntaxKind.ConstructorDeclaration)).OfType<ConstructorDeclarationSyntax>();
+            var newConstructorAlreadyExists =  allConstructors.Any(c => GetConstructorParameters(c).SetEquals(newConstructorParameters));
+            if (newConstructorAlreadyExists == false)
+            {
+                newMembers.Add(newConstructor);
+            }
+            
             return typeDeclaration.WithMembers(newMembers);
+        }
+
+        private static HashSet<(string, string)> GetConstructorParameters(ConstructorDeclarationSyntax newConstructor)
+        {
+            var newConstructorParameters = new HashSet<(string, string)>();
+            foreach (var parameter in newConstructor.ParameterList.Parameters)
+            {
+                newConstructorParameters.Add((parameter.Type.ToFullString(), parameter.Identifier.Text));
+            }
+
+            return newConstructorParameters;
         }
 
         private static MemberDeclarationSyntax GenerateConstructor(TypeDeclarationSyntax typeDeclaration, SyntaxGenerator generator, List<PropertyDeclarationSyntax> propertiesToSetFrmConstructor)
