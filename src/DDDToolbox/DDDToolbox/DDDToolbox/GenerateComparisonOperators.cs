@@ -22,13 +22,15 @@ namespace DDDToolbox
             var node = root.FindNode(context.Span);
             if (node is PropertyDeclarationSyntax propertyDeclaration)
             {
-                context.RegisterRefactoring(CodeAction.Create(title: Title, createChangedDocument: c => AddComparisonOperators(context.Document, propertyDeclaration, c), equivalenceKey: Title));
+                context.RegisterRefactoring(CodeAction.Create(title: Title, createChangedDocument: c => AddComparisonOperators(context.Document, propertyDeclaration.Parent as TypeDeclarationSyntax, propertyDeclaration.Identifier.Text, c), equivalenceKey: Title));
+            }else if (node is FieldDeclarationSyntax fieldDeclaration)
+            {
+                context.RegisterRefactoring(CodeAction.Create(title: Title, createChangedDocument: c => AddComparisonOperators(context.Document, fieldDeclaration.Parent as TypeDeclarationSyntax, fieldDeclaration.Declaration.Variables.First().Identifier.Text, c), equivalenceKey: Title));
             }
         }
 
-        private async Task<Document> AddComparisonOperators(Document document, PropertyDeclarationSyntax propertyDeclaration, CancellationToken cancellationToken)
+        private async Task<Document> AddComparisonOperators(Document document, TypeDeclarationSyntax typeDeclaration, string memberName, CancellationToken cancellationToken)
         {
-            var typeDeclaration = propertyDeclaration.Parent as TypeDeclarationSyntax;
             var generator = SyntaxGenerator.GetGenerator(document);
             var parameters = new List<SyntaxNode>
             {
@@ -36,8 +38,8 @@ namespace DDDToolbox
                 generator.ParameterDeclaration("b", SyntaxFactory.ParseTypeName(typeDeclaration.Identifier.Text))
             };
 
-            var firstValue = generator.MemberAccessExpression(generator.IdentifierName("a"), propertyDeclaration.Identifier.Text);
-            var secondValue = generator.MemberAccessExpression(generator.IdentifierName("b"), propertyDeclaration.Identifier.Text);
+            var firstValue = generator.MemberAccessExpression(generator.IdentifierName("a"), memberName);
+            var secondValue = generator.MemberAccessExpression(generator.IdentifierName("b"), memberName);
             var operatorReturnType = SyntaxFactory.ParseTypeName("bool");
             var staticModifiers = new DeclarationModifiers().WithIsStatic(true);
 
