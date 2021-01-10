@@ -11,8 +11,7 @@ jobs:
         Configuration: Release
         SolutionPath: src\DDDToolbox\DDDToolbox.sln
         VsixManifestPath: src\DDDToolbox\DDDToolbox\DDDToolbox.Vsix\source.extension.vsixmanifest
-        VsixPath: src\DDDToolbox\DDDToolbox\DDDToolbox.Vsix\bin\Release\DDDToolbox.vsix
-        Version: '1.2.${{ github.run_number }}-pr'
+        VsixPath: src\DDDToolbox\DDDToolbox\DDDToolbox.Vsix\bin\Release\DDDToolbox.vsix        
     steps:
     - uses: actions/checkout@v2   
     - name: Setup .NET Core
@@ -29,11 +28,17 @@ jobs:
         nuget-version: '5.x'
     - name: Restore NuGet Packages
       run: nuget restore $env:SolutionPath
-    - name: Set version for VSIX
-      run: |
-        $manifestXml = [xml](Get-Content $env:VsixManifestPath -Raw)
-        $manifestXml.PackageManifest.Metadata.Identity.Version = $env:Version
-        $manifestXml.save($env:VsixManifestPath)
+    - name: Calculate next version
+      uses: cezarypiatek/NextVersionGeneratorAction@0.2
+      with:
+        minor-pattern: '.*'
+        pre-release-tag: 'pr'
+        output-to-env-variable: 'Version'
+    - name: Set version for Visual Studio Extension
+      uses: cezarypiatek/VsixVersionAction@1.0
+      with:
+        version: ${{ env.Version }}
+        vsix-manifest-file: ${{ env.VsixManifestPath }}
     - name: Build extension
       run: msbuild $env:SolutionPath /t:Rebuild
       env: 
