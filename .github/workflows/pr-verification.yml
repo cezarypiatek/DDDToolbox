@@ -8,6 +8,10 @@ jobs:
     env: 
         DOTNET_NOLOGO: true
         DOTNET_CLI_TELEMETRY_OPTOUT: true
+        RepositoryUrl: 'https://github.com/${{ github.repository }}'
+        RepositoryBranch: '${{ github.ref }}'
+        SourceRevisionId: '${{ github.sha }}'
+        VersionSuffix: 'pr-${{github.event.number}}.${{ github.run_number }}'
         Configuration: Release
         SolutionPath: src\DDDToolbox\DDDToolbox.sln
         VsixManifestPath: src\DDDToolbox\DDDToolbox\DDDToolbox.Vsix\source.extension.vsixmanifest
@@ -32,8 +36,7 @@ jobs:
       uses: cezarypiatek/NextVersionGeneratorAction@0.2
       with:
         minor-pattern: '.*'
-        pre-release-tag: 'pr'
-        output-to-env-variable: 'Version'
+        output-to-env-variable: 'VersionPrefix'
     - name: Set version for Visual Studio Extension
       uses: cezarypiatek/VsixVersionAction@1.0
       with:
